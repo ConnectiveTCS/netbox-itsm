@@ -1,0 +1,121 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+  {{ block.super }}
+{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans "Service" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Name" %}</th>
+            <td>{{ object.name }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Type" %}</th>
+            <td>{% badge object.get_service_type_display object.get_service_type_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Status" %}</th>
+            <td>{% badge object.get_status_display object.get_status_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Health" %}</th>
+            <td>{% badge object.get_health_status_display object.get_health_status_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Tier Level" %}</th>
+            <td>{% badge object.get_tier_level_display object.get_tier_level_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "SLA Target" %}</th>
+            <td>{{ object.sla_target|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Owner" %}</th>
+            <td>{{ object.owner|linkify|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Description" %}</th>
+            <td>{{ object.description|placeholder }}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">{% trans "Contacts" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Owner Contact" %}</th>
+            <td>{{ object.owner_contact|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Escalation Contact" %}</th>
+            <td>{{ object.escalation_contact|placeholder }}</td>
+          </tr>
+        </table>
+      </div>
+      {% include 'inc/panels/custom_fields.html' %}
+      {% include 'inc/panels/tags.html' %}
+      {% include 'inc/panels/comments.html' %}
+    </div>
+    <div class="col col-md-6">
+      <div class="card">
+        <h2 class="card-header">
+          {% trans "Dependencies" %}
+          <div class="card-actions">
+            <a href="{% url 'plugins:netbox_itsm:service_dependencies' pk=object.pk %}" class="btn btn-primary btn-sm">
+              {% trans "View All" %}
+            </a>
+          </div>
+        </h2>
+        <table class="table table-hover">
+          <tr>
+            <th scope="col">{% trans "Depends On" %}</th>
+            <th scope="col">{% trans "Relationship" %}</th>
+            <th scope="col">{% trans "Criticality" %}</th>
+          </tr>
+          {% for dep in dependencies|slice:":10" %}
+            <tr>
+              <td>{{ dep.depends_on|linkify }}</td>
+              <td>{% badge dep.get_relationship_type_display dep.get_relationship_type_color %}</td>
+              <td>{% badge dep.get_criticality_display dep.get_criticality_color %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3" class="text-muted">{% trans "No dependencies defined" %}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">
+          {% trans "Assets" %}
+          <div class="card-actions">
+            <a href="{% url 'plugins:netbox_itsm:service_assets' pk=object.pk %}" class="btn btn-primary btn-sm">
+              {% trans "View All" %}
+            </a>
+          </div>
+        </h2>
+        <table class="table table-hover">
+          <tr>
+            <th scope="col">{% trans "Asset" %}</th>
+            <th scope="col">{% trans "Type" %}</th>
+            <th scope="col">{% trans "Link" %}</th>
+          </tr>
+          {% for asset_link in assets|slice:":10" %}
+            <tr>
+              <td>{{ asset_link.asset|linkify }}</td>
+              <td>{{ asset_link.asset_type }}</td>
+              <td>{% badge asset_link.get_link_type_display asset_link.get_link_type_color %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3" class="text-muted">{% trans "No assets linked" %}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

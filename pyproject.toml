@@ -1,0 +1,32 @@
+# See PEP 518 for the spec of this file
+# https://www.python.org/dev/peps/pep-0518/
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netbox-itsm"
+version = "0.1.0"
+authors = [
+    {name = "Kyle McPherson"},
+]
+description = "ITSM service mapping plugin for NetBox: model IT services, dependencies, and infrastructure links"
+readme = "README.md"
+
+classifiers = [
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    "Programming Language :: Python :: 3 :: Only",
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+]
+
+requires-python = ">=3.12.0"
+
+[tool.setuptools.packages.find]
+include = ["netbox_itsm*"]
+
+[tool.setuptools.package-data]
+netbox_itsm = ["templates/**/*.html", "static/**/*"]
