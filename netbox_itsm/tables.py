@@ -3,7 +3,14 @@ from django.utils.translation import gettext_lazy as _
 
 from netbox.tables import NetBoxTable, PrimaryModelTable, columns
 
-from .models import Service, ServiceAsset, ServiceDependency
+from .models import (
+    BusinessCapability,
+    Service,
+    ServiceAsset,
+    ServiceDependency,
+    ServicePortfolio,
+    ServicePortfolioMember,
+)
 
 
 class ServiceTable(PrimaryModelTable):
@@ -64,3 +71,55 @@ class ServiceAssetTable(PrimaryModelTable):
             'created', 'last_updated',
         )
         default_columns = ('pk', 'service', 'asset_type', 'asset', 'link_type')
+
+
+class ServicePortfolioTable(PrimaryModelTable):
+    name = tables.Column(linkify=True)
+    status = columns.ChoiceFieldColumn()
+    tags = columns.TagColumn(url_name='plugins:netbox_itsm:serviceportfolio_list')
+    member_count = tables.Column(
+        accessor='portfolio_memberships__count',
+        verbose_name=_('Services'),
+    )
+
+    class Meta(NetBoxTable.Meta):
+        model = ServicePortfolio
+        fields = (
+            'pk', 'id', 'name', 'business_domain', 'status', 'portfolio_owner_contact', 'owner', 'description',
+            'member_count', 'tags', 'created', 'last_updated',
+        )
+        default_columns = ('pk', 'name', 'business_domain', 'status', 'owner', 'member_count')
+
+
+class ServicePortfolioMemberTable(PrimaryModelTable):
+    portfolio = tables.Column(linkify=True)
+    service = tables.Column(linkify=True)
+    role = columns.ChoiceFieldColumn()
+    tags = columns.TagColumn(url_name='plugins:netbox_itsm:serviceportfoliomember_list')
+
+    class Meta(NetBoxTable.Meta):
+        model = ServicePortfolioMember
+        fields = (
+            'pk', 'id', 'portfolio', 'service', 'role', 'contribution_percentage', 'owner', 'description', 'tags',
+            'created', 'last_updated',
+        )
+        default_columns = ('pk', 'portfolio', 'service', 'role', 'contribution_percentage')
+
+
+class BusinessCapabilityTable(PrimaryModelTable):
+    name = tables.Column(linkify=True)
+    portfolio = tables.Column(linkify=True)
+    parent_capability = tables.Column(linkify=True)
+    tags = columns.TagColumn(url_name='plugins:netbox_itsm:businesscapability_list')
+    supported_service_count = tables.Column(
+        accessor='supported_services__count',
+        verbose_name=_('Services'),
+    )
+
+    class Meta(NetBoxTable.Meta):
+        model = BusinessCapability
+        fields = (
+            'pk', 'id', 'name', 'portfolio', 'parent_capability', 'owner', 'description',
+            'supported_service_count', 'tags', 'created', 'last_updated',
+        )
+        default_columns = ('pk', 'name', 'portfolio', 'parent_capability', 'supported_service_count')

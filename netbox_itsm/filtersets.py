@@ -10,11 +10,20 @@ from .choices import (
     ServiceDependencyCriticalityChoices,
     ServiceDependencyTypeChoices,
     ServiceHealthChoices,
+    ServicePortfolioMemberRoleChoices,
+    ServicePortfolioStatusChoices,
     ServiceStatusChoices,
     ServiceTierChoices,
     ServiceTypeChoices,
 )
-from .models import Service, ServiceAsset, ServiceDependency
+from .models import (
+    BusinessCapability,
+    Service,
+    ServiceAsset,
+    ServiceDependency,
+    ServicePortfolio,
+    ServicePortfolioMember,
+)
 
 
 @register_filterset
@@ -90,4 +99,83 @@ class ServiceAssetFilterSet(PrimaryModelFilterSet):
         return queryset.filter(
             Q(service__name__icontains=value) |
             Q(description__icontains=value)
+        )
+
+
+@register_filterset
+class ServicePortfolioFilterSet(PrimaryModelFilterSet):
+    status = django_filters.MultipleChoiceFilter(choices=ServicePortfolioStatusChoices, null_value=None)
+
+    class Meta:
+        model = ServicePortfolio
+        fields = ('id', 'name', 'slug', 'business_domain', 'portfolio_owner_contact')
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(business_domain__icontains=value) |
+            Q(description__icontains=value) |
+            Q(comments__icontains=value)
+        )
+
+
+@register_filterset
+class ServicePortfolioMemberFilterSet(PrimaryModelFilterSet):
+    portfolio_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='portfolio',
+        queryset=ServicePortfolio.objects.all(),
+        label='Portfolio (ID)',
+    )
+    service_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='service',
+        queryset=Service.objects.all(),
+        label='Service (ID)',
+    )
+    role = django_filters.MultipleChoiceFilter(choices=ServicePortfolioMemberRoleChoices, null_value=None)
+
+    class Meta:
+        model = ServicePortfolioMember
+        fields = ('id', 'contribution_percentage')
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(portfolio__name__icontains=value) |
+            Q(service__name__icontains=value) |
+            Q(description__icontains=value)
+        )
+
+
+@register_filterset
+class BusinessCapabilityFilterSet(PrimaryModelFilterSet):
+    portfolio_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='portfolio',
+        queryset=ServicePortfolio.objects.all(),
+        label='Portfolio (ID)',
+    )
+    parent_capability_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='parent_capability',
+        queryset=BusinessCapability.objects.all(),
+        label='Parent capability (ID)',
+    )
+    supported_service_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='supported_services',
+        queryset=Service.objects.all(),
+        label='Supported service (ID)',
+    )
+
+    class Meta:
+        model = BusinessCapability
+        fields = ('id', 'name', 'slug')
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(description__icontains=value) |
+            Q(comments__icontains=value)
         )

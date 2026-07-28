@@ -46,6 +46,51 @@ asset_buttons = (
     ),
 )
 
+portfolio_buttons = (
+    PluginMenuButton(
+        link='plugins:netbox_itsm:serviceportfolio_add',
+        title='Add',
+        icon_class='mdi mdi-plus-thick',
+        color=ButtonColorChoices.GREEN,
+    ),
+    PluginMenuButton(
+        link='plugins:netbox_itsm:serviceportfolio_bulk_import',
+        title='Import',
+        icon_class='mdi mdi-upload',
+        color=ButtonColorChoices.CYAN,
+    ),
+)
+
+portfolio_member_buttons = (
+    PluginMenuButton(
+        link='plugins:netbox_itsm:serviceportfoliomember_add',
+        title='Add',
+        icon_class='mdi mdi-plus-thick',
+        color=ButtonColorChoices.GREEN,
+    ),
+    PluginMenuButton(
+        link='plugins:netbox_itsm:serviceportfoliomember_bulk_import',
+        title='Import',
+        icon_class='mdi mdi-upload',
+        color=ButtonColorChoices.CYAN,
+    ),
+)
+
+business_capability_buttons = (
+    PluginMenuButton(
+        link='plugins:netbox_itsm:businesscapability_add',
+        title='Add',
+        icon_class='mdi mdi-plus-thick',
+        color=ButtonColorChoices.GREEN,
+    ),
+    PluginMenuButton(
+        link='plugins:netbox_itsm:businesscapability_bulk_import',
+        title='Import',
+        icon_class='mdi mdi-upload',
+        color=ButtonColorChoices.CYAN,
+    ),
+)
+
 menu = PluginMenu(
     label='ITSM',
     icon_class='mdi mdi-briefcase-outline',
@@ -68,6 +113,26 @@ menu = PluginMenu(
                 link_text='Asset Links',
                 permissions=['netbox_itsm.view_serviceasset'],
                 buttons=asset_buttons,
+            ),
+        )),
+        ('Portfolios & Capabilities', (
+            PluginMenuItem(
+                link='plugins:netbox_itsm:serviceportfolio_list',
+                link_text='Portfolios',
+                permissions=['netbox_itsm.view_serviceportfolio'],
+                buttons=portfolio_buttons,
+            ),
+            PluginMenuItem(
+                link='plugins:netbox_itsm:serviceportfoliomember_list',
+                link_text='Portfolio Members',
+                permissions=['netbox_itsm.view_serviceportfoliomember'],
+                buttons=portfolio_member_buttons,
+            ),
+            PluginMenuItem(
+                link='plugins:netbox_itsm:businesscapability_list',
+                link_text='Business Capabilities',
+                permissions=['netbox_itsm.view_businesscapability'],
+                buttons=business_capability_buttons,
             ),
         )),
     ),

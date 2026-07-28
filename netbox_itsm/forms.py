@@ -15,6 +15,7 @@ from utilities.forms.fields import (
     CSVContentTypeField,
     CSVModelChoiceField,
     DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
     SlugField,
 )
 from utilities.forms.rendering import FieldSet
@@ -24,11 +25,20 @@ from .choices import (
     ServiceDependencyCriticalityChoices,
     ServiceDependencyTypeChoices,
     ServiceHealthChoices,
+    ServicePortfolioMemberRoleChoices,
+    ServicePortfolioStatusChoices,
     ServiceStatusChoices,
     ServiceTierChoices,
     ServiceTypeChoices,
 )
-from .models import Service, ServiceAsset, ServiceDependency
+from .models import (
+    BusinessCapability,
+    Service,
+    ServiceAsset,
+    ServiceDependency,
+    ServicePortfolio,
+    ServicePortfolioMember,
+)
 
 #: Infrastructure object types that a Service can be linked to.
 ASSET_CONTENT_TYPES = models.Q(app_label='dcim', model__in=('device', 'interface', 'module')) | \
@@ -234,3 +244,189 @@ class ServiceAssetFilterForm(NetBoxModelFilterSetForm):
         label=_('Asset type'),
     )
     link_type = forms.MultipleChoiceField(choices=ServiceAssetLinkTypeChoices, required=False)
+
+
+# ------------------------------------------------------------------------
+# ServicePortfolio
+# ------------------------------------------------------------------------
+
+class ServicePortfolioForm(PrimaryModelForm):
+    slug = SlugField(slug_source='name')
+    comments = CommentField()
+
+    fieldsets = (
+        FieldSet('name', 'slug', 'business_domain', 'status', 'owner', 'tags', name=_('Portfolio')),
+        FieldSet('portfolio_owner_contact', name=_('Contacts')),
+        FieldSet('description', name=_('Additional Details')),
+    )
+
+    class Meta:
+        model = ServicePortfolio
+        fields = (
+            'name', 'slug', 'business_domain', 'status', 'portfolio_owner_contact', 'owner', 'description',
+            'comments', 'tags',
+        )
+
+
+class ServicePortfolioImportForm(NetBoxModelImportForm):
+    status = forms.ChoiceField(choices=ServicePortfolioStatusChoices, required=False)
+
+    class Meta:
+        model = ServicePortfolio
+        fields = (
+            'name', 'slug', 'business_domain', 'status', 'portfolio_owner_contact', 'description', 'comments',
+        )
+
+
+class ServicePortfolioBulkEditForm(NetBoxModelBulkEditForm):
+    business_domain = forms.CharField(max_length=100, required=False)
+    status = forms.ChoiceField(choices=ServicePortfolioStatusChoices, required=False)
+    portfolio_owner_contact = forms.CharField(max_length=200, required=False)
+    description = forms.CharField(max_length=200, required=False)
+    comments = CommentField()
+
+    model = ServicePortfolio
+    fieldsets = (
+        FieldSet('business_domain', 'status', 'portfolio_owner_contact', name=_('Portfolio')),
+    )
+    nullable_fields = ('business_domain', 'portfolio_owner_contact', 'description', 'comments')
+
+
+class ServicePortfolioFilterForm(NetBoxModelFilterSetForm):
+    model = ServicePortfolio
+    fieldsets = (
+        FieldSet('q', 'filter_id', 'tag'),
+        FieldSet('business_domain', 'status', name=_('Attributes')),
+    )
+    business_domain = forms.CharField(required=False)
+    status = forms.MultipleChoiceField(choices=ServicePortfolioStatusChoices, required=False)
+
+
+# ------------------------------------------------------------------------
+# ServicePortfolioMember
+# ------------------------------------------------------------------------
+
+class ServicePortfolioMemberForm(PrimaryModelForm):
+    portfolio = DynamicModelChoiceField(queryset=ServicePortfolio.objects.all())
+    service = DynamicModelChoiceField(queryset=Service.objects.all())
+    comments = CommentField()
+
+    fieldsets = (
+        FieldSet('portfolio', 'service', 'role', 'contribution_percentage', 'tags', name=_('Portfolio Member')),
+        FieldSet('description', name=_('Additional Details')),
+    )
+
+    class Meta:
+        model = ServicePortfolioMember
+        fields = (
+            'portfolio', 'service', 'role', 'contribution_percentage', 'owner', 'description', 'comments', 'tags',
+        )
+
+
+class ServicePortfolioMemberImportForm(NetBoxModelImportForm):
+    portfolio = CSVModelChoiceField(
+        queryset=ServicePortfolio.objects.all(),
+        to_field_name='name',
+    )
+    service = CSVModelChoiceField(
+        queryset=Service.objects.all(),
+        to_field_name='name',
+    )
+    role = forms.ChoiceField(choices=ServicePortfolioMemberRoleChoices, required=False)
+
+    class Meta:
+        model = ServicePortfolioMember
+        fields = ('portfolio', 'service', 'role', 'contribution_percentage', 'description', 'comments')
+
+
+class ServicePortfolioMemberBulkEditForm(NetBoxModelBulkEditForm):
+    role = forms.ChoiceField(choices=ServicePortfolioMemberRoleChoices, required=False)
+    contribution_percentage = forms.IntegerField(min_value=0, max_value=100, required=False)
+    description = forms.CharField(max_length=200, required=False)
+    comments = CommentField()
+
+    model = ServicePortfolioMember
+    fieldsets = (
+        FieldSet('role', 'contribution_percentage', name=_('Portfolio Member')),
+    )
+    nullable_fields = ('description', 'comments')
+
+
+class ServicePortfolioMemberFilterForm(NetBoxModelFilterSetForm):
+    model = ServicePortfolioMember
+    fieldsets = (
+        FieldSet('q', 'filter_id', 'tag'),
+        FieldSet('portfolio_id', 'service_id', 'role', name=_('Attributes')),
+    )
+    portfolio_id = DynamicModelChoiceField(queryset=ServicePortfolio.objects.all(), required=False, label=_('Portfolio'))
+    service_id = DynamicModelChoiceField(queryset=Service.objects.all(), required=False, label=_('Service'))
+    role = forms.MultipleChoiceField(choices=ServicePortfolioMemberRoleChoices, required=False)
+
+
+# ------------------------------------------------------------------------
+# BusinessCapability
+# ------------------------------------------------------------------------
+
+class BusinessCapabilityForm(PrimaryModelForm):
+    slug = SlugField(slug_source='name')
+    portfolio = DynamicModelChoiceField(queryset=ServicePortfolio.objects.all())
+    parent_capability = DynamicModelChoiceField(queryset=BusinessCapability.objects.all(), required=False)
+    supported_services = DynamicModelMultipleChoiceField(queryset=Service.objects.all(), required=False)
+    comments = CommentField()
+
+    fieldsets = (
+        FieldSet('name', 'slug', 'portfolio', 'parent_capability', 'owner', 'tags', name=_('Business Capability')),
+        FieldSet('supported_services', name=_('Supported Services')),
+        FieldSet('description', name=_('Additional Details')),
+    )
+
+    class Meta:
+        model = BusinessCapability
+        fields = (
+            'name', 'slug', 'portfolio', 'parent_capability', 'supported_services', 'owner', 'description',
+            'comments', 'tags',
+        )
+
+
+class BusinessCapabilityImportForm(NetBoxModelImportForm):
+    portfolio = CSVModelChoiceField(
+        queryset=ServicePortfolio.objects.all(),
+        to_field_name='name',
+    )
+    parent_capability = CSVModelChoiceField(
+        queryset=BusinessCapability.objects.all(),
+        to_field_name='name',
+        required=False,
+    )
+
+    class Meta:
+        model = BusinessCapability
+        fields = ('name', 'slug', 'portfolio', 'parent_capability', 'description', 'comments')
+
+
+class BusinessCapabilityBulkEditForm(NetBoxModelBulkEditForm):
+    portfolio = DynamicModelChoiceField(queryset=ServicePortfolio.objects.all(), required=False)
+    parent_capability = DynamicModelChoiceField(queryset=BusinessCapability.objects.all(), required=False)
+    description = forms.CharField(max_length=200, required=False)
+    comments = CommentField()
+
+    model = BusinessCapability
+    fieldsets = (
+        FieldSet('portfolio', 'parent_capability', name=_('Business Capability')),
+    )
+    nullable_fields = ('parent_capability', 'description', 'comments')
+
+
+class BusinessCapabilityFilterForm(NetBoxModelFilterSetForm):
+    model = BusinessCapability
+    fieldsets = (
+        FieldSet('q', 'filter_id', 'tag'),
+        FieldSet('portfolio_id', 'parent_capability_id', 'supported_service_id', name=_('Attributes')),
+    )
+    portfolio_id = DynamicModelChoiceField(queryset=ServicePortfolio.objects.all(), required=False, label=_('Portfolio'))
+    parent_capability_id = DynamicModelChoiceField(
+        queryset=BusinessCapability.objects.all(), required=False, label=_('Parent capability'),
+    )
+    supported_service_id = DynamicModelChoiceField(
+        queryset=Service.objects.all(), required=False, label=_('Supported service'),
+    )

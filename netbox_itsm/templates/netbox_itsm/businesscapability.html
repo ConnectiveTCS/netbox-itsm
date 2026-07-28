@@ -1,0 +1,70 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load i18n %}
+
+{% block content %}
+  <div class="row">
+    <div class="col col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans "Business Capability" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Name" %}</th>
+            <td>{{ object.name }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Portfolio" %}</th>
+            <td>{{ object.portfolio|linkify }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Parent Capability" %}</th>
+            <td>{{ object.parent_capability|linkify|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Owner" %}</th>
+            <td>{{ object.owner|linkify|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Description" %}</th>
+            <td>{{ object.description|placeholder }}</td>
+          </tr>
+        </table>
+      </div>
+      {% include 'inc/panels/custom_fields.html' %}
+      {% include 'inc/panels/tags.html' %}
+      {% include 'inc/panels/comments.html' %}
+    </div>
+    <div class="col col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans "Supported Services" %}</h2>
+        <table class="table table-hover">
+          <tr>
+            <th scope="col">{% trans "Service" %}</th>
+          </tr>
+          {% for service in supported_services|slice:":10" %}
+            <tr>
+              <td>{{ service|linkify }}</td>
+            </tr>
+          {% empty %}
+            <tr><td class="text-muted">{% trans "No services linked" %}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">{% trans "Child Capabilities" %}</h2>
+        <table class="table table-hover">
+          <tr>
+            <th scope="col">{% trans "Capability" %}</th>
+          </tr>
+          {% for capability in child_capabilities|slice:":10" %}
+            <tr>
+              <td>{{ capability|linkify }}</td>
+            </tr>
+          {% empty %}
+            <tr><td class="text-muted">{% trans "No child capabilities" %}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

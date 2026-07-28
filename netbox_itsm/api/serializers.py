@@ -6,12 +6,22 @@ from netbox.api.fields import ContentTypeField
 from netbox.api.gfk_fields import GFKSerializerField
 from netbox.api.serializers import PrimaryModelSerializer
 
-from ..models import Service, ServiceAsset, ServiceDependency
+from ..models import (
+    BusinessCapability,
+    Service,
+    ServiceAsset,
+    ServiceDependency,
+    ServicePortfolio,
+    ServicePortfolioMember,
+)
 
 __all__ = (
+    'BusinessCapabilitySerializer',
     'ServiceSerializer',
     'ServiceAssetSerializer',
     'ServiceDependencySerializer',
+    'ServicePortfolioSerializer',
+    'ServicePortfolioMemberSerializer',
 )
 
 
@@ -64,3 +74,54 @@ class ServiceAssetSerializer(PrimaryModelSerializer):
                     f"Invalid asset: {data['asset_type']} ID {data['asset_id']}"
                 )
         return super().validate(data)
+
+
+class ServicePortfolioSerializer(PrimaryModelSerializer):
+    member_count = serializers.IntegerField(read_only=True, required=False)
+    aggregate_health_status = serializers.SerializerMethodField(read_only=True)
+    sla_compliance_summary = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ServicePortfolio
+        fields = (
+            'id', 'url', 'display', 'name', 'slug', 'business_domain', 'status', 'portfolio_owner_contact',
+            'owner', 'description', 'comments', 'tags', 'custom_fields', 'created', 'last_updated',
+            'member_count', 'aggregate_health_status', 'sla_compliance_summary',
+        )
+        brief_fields = ('id', 'url', 'display', 'name', 'business_domain', 'status')
+
+    def get_aggregate_health_status(self, obj):
+        return obj.get_aggregate_health_status()
+
+    def get_sla_compliance_summary(self, obj):
+        return obj.get_sla_compliance_summary()
+
+
+class ServicePortfolioMemberSerializer(PrimaryModelSerializer):
+    portfolio = ServicePortfolioSerializer(nested=True)
+    service = ServiceSerializer(nested=True)
+
+    class Meta:
+        model = ServicePortfolioMember
+        fields = (
+            'id', 'url', 'display', 'portfolio', 'service', 'role', 'contribution_percentage', 'owner',
+            'description', 'comments', 'tags', 'custom_fields', 'created', 'last_updated',
+        )
+        brief_fields = ('id', 'url', 'display', 'portfolio', 'service', 'role')
+
+
+class BusinessCapabilitySerializer(PrimaryModelSerializer):
+    portfolio = ServicePortfolioSerializer(nested=True)
+    parent_capability = serializers.PrimaryKeyRelatedField(
+        queryset=BusinessCapability.objects.all(), required=False, allow_null=True,
+    )
+    supported_service_count = serializers.IntegerField(read_only=True, required=False)
+
+    class Meta:
+        model = BusinessCapability
+        fields = (
+            'id', 'url', 'display', 'name', 'slug', 'portfolio', 'parent_capability', 'supported_services',
+            'owner', 'description', 'comments', 'tags', 'custom_fields', 'created', 'last_updated',
+            'supported_service_count',
+        )
+        brief_fields = ('id', 'url', 'display', 'name', 'portfolio')

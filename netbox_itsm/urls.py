@@ -14,4 +14,13 @@ urlpatterns = [
 
     path('service-assets/', include(get_model_urls('netbox_itsm', 'serviceasset', detail=False))),
     path('service-assets/<int:pk>/', include(get_model_urls('netbox_itsm', 'serviceasset'))),
+
+    path('portfolios/', include(get_model_urls('netbox_itsm', 'serviceportfolio', detail=False))),
+    path('portfolios/<int:pk>/', include(get_model_urls('netbox_itsm', 'serviceportfolio'))),
+
+    path('portfolio-members/', include(get_model_urls('netbox_itsm', 'serviceportfoliomember', detail=False))),
+    path('portfolio-members/<int:pk>/', include(get_model_urls('netbox_itsm', 'serviceportfoliomember'))),
+
+    path('business-capabilities/', include(get_model_urls('netbox_itsm', 'businesscapability', detail=False))),
+    path('business-capabilities/<int:pk>/', include(get_model_urls('netbox_itsm', 'businesscapability'))),
 ]

@@ -32,6 +32,12 @@ run* and *what it runs on*.
   object — device, interface, module, virtual machine, or circuit — via a
   generic relationship, with a link type (runs on / depends on / manages /
   monitors).
+- **Service portfolios** — group services into business-aligned domains
+  (e.g. Finance, Engineering), with a role and contribution-percentage
+  weighting per member service, and computed portfolio-level aggregate
+  health and SLA-compliance rollups.
+- **Business capabilities** — model the business capabilities a portfolio's
+  services support, optionally nested under a parent capability.
 - Bulk import (CSV), bulk edit, and bulk delete for every model.
 - Full REST API.
 - Tags, custom fields, comments, ownership, and change logging on every
@@ -47,7 +53,13 @@ run* and *what it runs on*.
 Service
  ├─ outbound_dependencies ──▶ ServiceDependency ──▶ depends_on (Service)
  ├─ dependents          ◀── ServiceDependency ◀── (other Service.service)
- └─ assets ──▶ ServiceAsset ──▶ asset (any NetBox object, via ContentType)
+ ├─ assets ──▶ ServiceAsset ──▶ asset (any NetBox object, via ContentType)
+ └─ portfolio_memberships ──▶ ServicePortfolioMember ──▶ portfolio (ServicePortfolio)
+
+ServicePortfolio
+ ├─ portfolio_memberships ──▶ ServicePortfolioMember ──▶ service (Service)
+ └─ capabilities ──▶ BusinessCapability ──▶ supported_services (Service, M2M)
+                                          └─▶ parent_capability (self, optional)
 ```
 
 | Model | Purpose | Key fields |
@@ -55,9 +67,22 @@ Service
 | `Service` | An IT service | `name`, `service_type`, `status`, `health_status`, `tier_level`, `sla_target`, `owner_contact`, `escalation_contact` |
 | `ServiceDependency` | A directed edge between two services | `service`, `depends_on`, `relationship_type`, `criticality` |
 | `ServiceAsset` | A link from a service to an infrastructure object | `service`, `asset_type`, `asset_id` (→ `asset`), `link_type` |
+| `ServicePortfolio` | A business-aligned grouping of services | `name`, `business_domain`, `status`, `portfolio_owner_contact` |
+| `ServicePortfolioMember` | A service's membership in a portfolio | `portfolio`, `service`, `role`, `contribution_percentage` |
+| `BusinessCapability` | A business capability a portfolio's services support | `name`, `portfolio`, `parent_capability`, `supported_services` |
 
-All three inherit from NetBox's `PrimaryModel`, so each also has `description`,
+All six inherit from NetBox's `PrimaryModel`, so each also has `description`,
 `comments`, `owner`, `tags`, and custom fields.
+
+`ServicePortfolio` exposes two computed rollups, both available on the detail
+page and via the API:
+
+- **Aggregate health** — the worst `health_status` among the portfolio's
+  member services (a portfolio is only as healthy as its least healthy
+  member).
+- **SLA compliance summary** — a weighted average of member services'
+  numeric `sla_target` values, weighted by each membership's
+  `contribution_percentage`.
 
 ## Compatibility
 
@@ -65,7 +90,7 @@ See [COMPATIBILITY.md](COMPATIBILITY.md) for the full matrix. Current release:
 
 | NetBox Version | Plugin Version |
 |-----------------|----------------|
-| 4.6.x            | 0.1.0          |
+| 4.6.x            | 0.2.0          |
 
 ## Installation
 
@@ -125,10 +150,19 @@ Once enabled, an **ITSM** menu appears in the NetBox navigation with:
 - **Asset Links** — service-to-infrastructure mappings. Create one by picking
   a `Service`, an asset type (e.g. `dcim | device`), and the numeric ID of
   the specific object.
+- **Portfolios** — business-aligned groupings of services. Create one, then
+  add member services via **Portfolio Members** with a role and
+  contribution percentage.
+- **Portfolio Members** — the service-to-portfolio join, with role and
+  SLA-rollup weighting.
+- **Business Capabilities** — capabilities a portfolio's services support,
+  optionally nested under a parent capability.
 
 From a service's detail page, the **Dependencies** and **Assets** tabs show
 everything linked to that service, each with a link back to the full,
-filterable list.
+filterable list. From a portfolio's detail page, the **Members** and
+**Capabilities** tabs do the same, alongside the computed aggregate health
+and SLA-compliance rollups.
 
 ## REST API
 
@@ -139,6 +173,9 @@ Available at `/api/plugins/itsm/`:
 | `/api/plugins/itsm/services/` | Service CRUD, with `dependency_count` and `asset_count` annotations |
 | `/api/plugins/itsm/service-dependencies/` | Dependency CRUD, with nested `service`/`depends_on` |
 | `/api/plugins/itsm/service-assets/` | Asset-link CRUD, with the linked object exposed read-only under `asset` |
+| `/api/plugins/itsm/portfolios/` | Portfolio CRUD, with `member_count`, `aggregate_health_status`, and `sla_compliance_summary` |
+| `/api/plugins/itsm/portfolio-members/` | Portfolio membership CRUD, with nested `portfolio`/`service` |
+| `/api/plugins/itsm/business-capabilities/` | Business capability CRUD, with `supported_service_count` |
 
 Example — create a service:
 
@@ -180,6 +217,9 @@ Standard Django/NetBox object permissions apply per model and action:
 netbox_itsm.view_service      netbox_itsm.add_service      netbox_itsm.change_service      netbox_itsm.delete_service
 netbox_itsm.view_servicedependency  ...
 netbox_itsm.view_serviceasset       ...
+netbox_itsm.view_serviceportfolio       ...
+netbox_itsm.view_serviceportfoliomember ...
+netbox_itsm.view_businesscapability     ...
 ```
 
 These are assignable through NetBox's normal Users & Permissions UI, and are
@@ -187,22 +227,21 @@ enforced identically across the web UI and the REST API.
 
 ## Roadmap
 
-This is a deliberately minimal v1: the service catalog, dependency graph, and
-asset linking needed to make NetBox useful as an ITSM source of truth. Later
-phases (not yet implemented) are expected to add, roughly in order:
+v1 shipped the service catalog, dependency graph, and asset linking needed to
+make NetBox useful as an ITSM source of truth. Phase 2 added service
+portfolios and business capabilities. Later phases (not yet implemented) are
+expected to add, roughly in order:
 
-1. **Service portfolios** — group services into business domains with
-   SLA rollup.
-2. **External ITSM integration** — sync with ServiceNow/Jira, incident
+1. **External ITSM integration** — sync with ServiceNow/Jira, incident
    linking, webhooks.
-3. **Health monitoring** — pull real metrics from Prometheus/Datadog and
+2. **Health monitoring** — pull real metrics from Prometheus/Datadog and
    infer health from linked infrastructure status.
-4. **Change management** — change requests, approval workflows, impact
+3. **Change management** — change requests, approval workflows, impact
    analysis, audit trail.
-5. **Reporting & analytics** — inventory/health/SLA reports, an interactive
+4. **Reporting & analytics** — inventory/health/SLA reports, an interactive
    dependency graph.
-6. **Capacity planning** — capacity forecasting and cost projection.
-7. **Advanced relationships** — contracts, documentation, team ownership,
+5. **Capacity planning** — capacity forecasting and cost projection.
+6. **Advanced relationships** — contracts, documentation, team ownership,
    on-call rotation, composite services.
 
 See [CHANGELOG.md](CHANGELOG.md) for what's actually shipped so far.

@@ -107,3 +107,31 @@ class ServiceAssetLinkTypeChoices(ChoiceSet):
         (LINK_MANAGES, 'Manages', 'purple'),
         (LINK_MONITORS, 'Monitors', 'cyan'),
     ]
+
+
+class ServicePortfolioStatusChoices(ChoiceSet):
+    key = 'ServicePortfolio.status'
+
+    STATUS_ACTIVE = 'active'
+    STATUS_PLANNING = 'planning'
+    STATUS_RETIRING = 'retiring'
+
+    CHOICES = [
+        (STATUS_ACTIVE, 'Active', 'green'),
+        (STATUS_PLANNING, 'Planning', 'cyan'),
+        (STATUS_RETIRING, 'Retiring', 'amber'),
+    ]
+
+
+class ServicePortfolioMemberRoleChoices(ChoiceSet):
+    key = 'ServicePortfolioMember.role'
+
+    ROLE_PRIMARY = 'primary'
+    ROLE_SUPPORTING = 'supporting'
+    ROLE_OPTIONAL = 'optional'
+
+    CHOICES = [
+        (ROLE_PRIMARY, 'Primary', 'blue'),
+        (ROLE_SUPPORTING, 'Supporting', 'cyan'),
+        (ROLE_OPTIONAL, 'Optional', 'gray'),
+    ]

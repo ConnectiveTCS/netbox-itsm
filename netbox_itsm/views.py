@@ -4,7 +4,14 @@ from netbox.views import generic
 from utilities.views import ViewTab, register_model_view
 
 from . import filtersets, forms, tables
-from .models import Service, ServiceAsset, ServiceDependency
+from .models import (
+    BusinessCapability,
+    Service,
+    ServiceAsset,
+    ServiceDependency,
+    ServicePortfolio,
+    ServicePortfolioMember,
+)
 
 # ------------------------------------------------------------------------
 # Service
@@ -204,3 +211,209 @@ class ServiceAssetBulkDeleteView(generic.BulkDeleteView):
     queryset = ServiceAsset.objects.all()
     filterset = filtersets.ServiceAssetFilterSet
     table = tables.ServiceAssetTable
+
+
+# ------------------------------------------------------------------------
+# ServicePortfolio
+# ------------------------------------------------------------------------
+
+
+@register_model_view(ServicePortfolio, 'list', path='', detail=False)
+class ServicePortfolioListView(generic.ObjectListView):
+    queryset = ServicePortfolio.objects.annotate(
+        member_count=Count('portfolio_memberships', distinct=True),
+    )
+    table = tables.ServicePortfolioTable
+    filterset = filtersets.ServicePortfolioFilterSet
+    filterset_form = forms.ServicePortfolioFilterForm
+
+
+@register_model_view(ServicePortfolio)
+class ServicePortfolioView(generic.ObjectView):
+    queryset = ServicePortfolio.objects.all()
+
+    def get_extra_context(self, request, instance):
+        members = instance.portfolio_memberships.select_related('service')
+        capabilities = instance.capabilities.select_related('parent_capability')
+        return {
+            'members': members,
+            'capabilities': capabilities,
+            'sla_compliance_summary': instance.get_sla_compliance_summary(),
+        }
+
+
+@register_model_view(ServicePortfolio, 'add', detail=False)
+@register_model_view(ServicePortfolio, 'edit')
+class ServicePortfolioEditView(generic.ObjectEditView):
+    queryset = ServicePortfolio.objects.all()
+    form = forms.ServicePortfolioForm
+
+
+@register_model_view(ServicePortfolio, 'delete')
+class ServicePortfolioDeleteView(generic.ObjectDeleteView):
+    queryset = ServicePortfolio.objects.all()
+
+
+@register_model_view(ServicePortfolio, 'bulk_import', path='import', detail=False)
+class ServicePortfolioBulkImportView(generic.BulkImportView):
+    queryset = ServicePortfolio.objects.all()
+    model_form = forms.ServicePortfolioImportForm
+
+
+@register_model_view(ServicePortfolio, 'bulk_edit', path='edit', detail=False)
+class ServicePortfolioBulkEditView(generic.BulkEditView):
+    queryset = ServicePortfolio.objects.all()
+    filterset = filtersets.ServicePortfolioFilterSet
+    table = tables.ServicePortfolioTable
+    form = forms.ServicePortfolioBulkEditForm
+
+
+@register_model_view(ServicePortfolio, 'bulk_delete', path='delete', detail=False)
+class ServicePortfolioBulkDeleteView(generic.BulkDeleteView):
+    queryset = ServicePortfolio.objects.all()
+    filterset = filtersets.ServicePortfolioFilterSet
+    table = tables.ServicePortfolioTable
+
+
+@register_model_view(ServicePortfolio, name='members', path='members')
+class ServicePortfolioMembersView(generic.ObjectChildrenView):
+    queryset = ServicePortfolio.objects.all()
+    child_model = ServicePortfolioMember
+    table = tables.ServicePortfolioMemberTable
+    filterset = filtersets.ServicePortfolioMemberFilterSet
+    tab = ViewTab(
+        label='Members',
+        badge=lambda obj: obj.portfolio_memberships.count(),
+        permission='netbox_itsm.view_serviceportfoliomember',
+        weight=500,
+    )
+
+    def get_children(self, request, parent):
+        return ServicePortfolioMember.objects.filter(portfolio=parent).select_related('service')
+
+
+@register_model_view(ServicePortfolio, name='capabilities', path='capabilities')
+class ServicePortfolioCapabilitiesView(generic.ObjectChildrenView):
+    queryset = ServicePortfolio.objects.all()
+    child_model = BusinessCapability
+    table = tables.BusinessCapabilityTable
+    filterset = filtersets.BusinessCapabilityFilterSet
+    tab = ViewTab(
+        label='Capabilities',
+        badge=lambda obj: obj.capabilities.count(),
+        permission='netbox_itsm.view_businesscapability',
+        weight=600,
+    )
+
+    def get_children(self, request, parent):
+        return BusinessCapability.objects.filter(portfolio=parent).select_related('parent_capability')
+
+
+# ------------------------------------------------------------------------
+# ServicePortfolioMember
+# ------------------------------------------------------------------------
+
+
+@register_model_view(ServicePortfolioMember, 'list', path='', detail=False)
+class ServicePortfolioMemberListView(generic.ObjectListView):
+    queryset = ServicePortfolioMember.objects.select_related('portfolio', 'service')
+    table = tables.ServicePortfolioMemberTable
+    filterset = filtersets.ServicePortfolioMemberFilterSet
+    filterset_form = forms.ServicePortfolioMemberFilterForm
+
+
+@register_model_view(ServicePortfolioMember)
+class ServicePortfolioMemberView(generic.ObjectView):
+    queryset = ServicePortfolioMember.objects.all()
+
+
+@register_model_view(ServicePortfolioMember, 'add', detail=False)
+@register_model_view(ServicePortfolioMember, 'edit')
+class ServicePortfolioMemberEditView(generic.ObjectEditView):
+    queryset = ServicePortfolioMember.objects.all()
+    form = forms.ServicePortfolioMemberForm
+
+
+@register_model_view(ServicePortfolioMember, 'delete')
+class ServicePortfolioMemberDeleteView(generic.ObjectDeleteView):
+    queryset = ServicePortfolioMember.objects.all()
+
+
+@register_model_view(ServicePortfolioMember, 'bulk_import', path='import', detail=False)
+class ServicePortfolioMemberBulkImportView(generic.BulkImportView):
+    queryset = ServicePortfolioMember.objects.all()
+    model_form = forms.ServicePortfolioMemberImportForm
+
+
+@register_model_view(ServicePortfolioMember, 'bulk_edit', path='edit', detail=False)
+class ServicePortfolioMemberBulkEditView(generic.BulkEditView):
+    queryset = ServicePortfolioMember.objects.all()
+    filterset = filtersets.ServicePortfolioMemberFilterSet
+    table = tables.ServicePortfolioMemberTable
+    form = forms.ServicePortfolioMemberBulkEditForm
+
+
+@register_model_view(ServicePortfolioMember, 'bulk_delete', path='delete', detail=False)
+class ServicePortfolioMemberBulkDeleteView(generic.BulkDeleteView):
+    queryset = ServicePortfolioMember.objects.all()
+    filterset = filtersets.ServicePortfolioMemberFilterSet
+    table = tables.ServicePortfolioMemberTable
+
+
+# ------------------------------------------------------------------------
+# BusinessCapability
+# ------------------------------------------------------------------------
+
+
+@register_model_view(BusinessCapability, 'list', path='', detail=False)
+class BusinessCapabilityListView(generic.ObjectListView):
+    queryset = BusinessCapability.objects.annotate(
+        supported_service_count=Count('supported_services', distinct=True),
+    ).select_related('portfolio', 'parent_capability')
+    table = tables.BusinessCapabilityTable
+    filterset = filtersets.BusinessCapabilityFilterSet
+    filterset_form = forms.BusinessCapabilityFilterForm
+
+
+@register_model_view(BusinessCapability)
+class BusinessCapabilityView(generic.ObjectView):
+    queryset = BusinessCapability.objects.all()
+
+    def get_extra_context(self, request, instance):
+        return {
+            'supported_services': instance.supported_services.all(),
+            'child_capabilities': instance.child_capabilities.all(),
+        }
+
+
+@register_model_view(BusinessCapability, 'add', detail=False)
+@register_model_view(BusinessCapability, 'edit')
+class BusinessCapabilityEditView(generic.ObjectEditView):
+    queryset = BusinessCapability.objects.all()
+    form = forms.BusinessCapabilityForm
+
+
+@register_model_view(BusinessCapability, 'delete')
+class BusinessCapabilityDeleteView(generic.ObjectDeleteView):
+    queryset = BusinessCapability.objects.all()
+
+
+@register_model_view(BusinessCapability, 'bulk_import', path='import', detail=False)
+class BusinessCapabilityBulkImportView(generic.BulkImportView):
+    queryset = BusinessCapability.objects.all()
+    model_form = forms.BusinessCapabilityImportForm
+
+
+@register_model_view(BusinessCapability, 'bulk_edit', path='edit', detail=False)
+class BusinessCapabilityBulkEditView(generic.BulkEditView):
+    queryset = BusinessCapability.objects.all()
+    filterset = filtersets.BusinessCapabilityFilterSet
+    table = tables.BusinessCapabilityTable
+    form = forms.BusinessCapabilityBulkEditForm
+
+
+@register_model_view(BusinessCapability, 'bulk_delete', path='delete', detail=False)
+class BusinessCapabilityBulkDeleteView(generic.BulkDeleteView):
+    queryset = BusinessCapability.objects.all()
+    filterset = filtersets.BusinessCapabilityFilterSet
+    table = tables.BusinessCapabilityTable

@@ -1,0 +1,126 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load i18n %}
+
+{% block content %}
+  <div class="row">
+    <div class="col col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans "Portfolio" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Name" %}</th>
+            <td>{{ object.name }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Business Domain" %}</th>
+            <td>{{ object.business_domain|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Status" %}</th>
+            <td>{% badge object.get_status_display object.get_status_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Owner" %}</th>
+            <td>{{ object.owner|linkify|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Description" %}</th>
+            <td>{{ object.description|placeholder }}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">{% trans "Contacts" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Portfolio Owner Contact" %}</th>
+            <td>{{ object.portfolio_owner_contact|placeholder }}</td>
+          </tr>
+        </table>
+      </div>
+      {% include 'inc/panels/custom_fields.html' %}
+      {% include 'inc/panels/tags.html' %}
+      {% include 'inc/panels/comments.html' %}
+    </div>
+    <div class="col col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans "Rollup Metrics" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Aggregate Health" %}</th>
+            <td>
+              {% with health_display=object.get_aggregate_health_status_display %}
+                {% if health_display %}
+                  {% badge health_display object.get_aggregate_health_status_color %}
+                {% else %}
+                  {{ None|placeholder }}
+                {% endif %}
+              {% endwith %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "SLA Compliance (weighted avg.)" %}</th>
+            <td>
+              {% if sla_compliance_summary is not None %}
+                {{ sla_compliance_summary }}%
+              {% else %}
+                {{ None|placeholder }}
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">
+          {% trans "Members" %}
+          <div class="card-actions">
+            <a href="{% url 'plugins:netbox_itsm:serviceportfolio_members' pk=object.pk %}" class="btn btn-primary btn-sm">
+              {% trans "View All" %}
+            </a>
+          </div>
+        </h2>
+        <table class="table table-hover">
+          <tr>
+            <th scope="col">{% trans "Service" %}</th>
+            <th scope="col">{% trans "Role" %}</th>
+            <th scope="col">{% trans "Contribution %" %}</th>
+          </tr>
+          {% for member in members|slice:":10" %}
+            <tr>
+              <td>{{ member.service|linkify }}</td>
+              <td>{% badge member.get_role_display member.get_role_color %}</td>
+              <td>{{ member.contribution_percentage }}%</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3" class="text-muted">{% trans "No member services" %}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">
+          {% trans "Capabilities" %}
+          <div class="card-actions">
+            <a href="{% url 'plugins:netbox_itsm:serviceportfolio_capabilities' pk=object.pk %}" class="btn btn-primary btn-sm">
+              {% trans "View All" %}
+            </a>
+          </div>
+        </h2>
+        <table class="table table-hover">
+          <tr>
+            <th scope="col">{% trans "Capability" %}</th>
+            <th scope="col">{% trans "Parent" %}</th>
+          </tr>
+          {% for capability in capabilities|slice:":10" %}
+            <tr>
+              <td>{{ capability|linkify }}</td>
+              <td>{{ capability.parent_capability|linkify|placeholder }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="2" class="text-muted">{% trans "No capabilities defined" %}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}
